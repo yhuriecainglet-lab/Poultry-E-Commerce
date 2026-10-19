@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/*
+ * Poultry E-Commerce design tokens.
+ * Warm, farm-fresh look:
+ *   - primary deep green: #1f6b3c
+ *   - accent warm amber: #d97706
+ *   - background off-white: #fbf7f0
+ *   - text charcoal: #1f2937
+ */
+
+:root {
+  --color-bg: #fbf7f0;
+  --color-text: #1f2937;
+  --color-primary: #1f6b3c;
+  --color-primary-dark: #16512d;
+  --color-accent: #d97706;
+  --color-accent-dark: #b45309;
+  --color-cream: #fbf7f0;
+  --color-charcoal: #1f2937;
+  --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-success: #16a34a;
+  --color-warning: #ea580c;
+  --color-danger: #dc2626;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-text: var(--color-text);
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-accent: var(--color-accent);
+  --color-accent-dark: var(--color-accent-dark);
+  --color-cream: var(--color-cream);
+  --color-charcoal: var(--color-charcoal);
+  --color-muted: var(--color-muted);
+  --color-border: var(--color-border);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --font-sans: var(--font-poppins);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Focus ring for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline from mouse clicks */
+:focus:not(:focus-visible) {
+  outline: none;
+}
