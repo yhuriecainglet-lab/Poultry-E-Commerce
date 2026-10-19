@@ -18,20 +18,16 @@ export default async function AdminLayout({
     data: { session },
   } = await supabaseServer.auth.getSession();
 
-  if (!session) {
-    redirect("/admin/login");
-  }
-
-  // If an admin email is configured, enforce it.
+  // If an admin email is configured, enforce it (only for already-signed-in users).
   const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail && session.user.email !== adminEmail) {
+  if (adminEmail && session && session.user.email !== adminEmail) {
     await supabaseServer.auth.signOut();
     redirect("/admin/login");
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <AdminHeader email={session.user.email ?? ""} />
+      <AdminHeader email={(session?.user.email) ?? ""} />
       <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
         {children}
       </main>
