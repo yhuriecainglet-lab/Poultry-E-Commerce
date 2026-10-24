@@ -1,37 +1,12 @@
 // app/admin/layout.tsx
-// Layout for /admin routes. Protected by AdminGuard (client-side).
-
-"use client";
-
-import { AdminGuard } from "@/components/admin/AdminGuard";
-import { AdminHeader } from "@/components/admin/AdminHeader";
-import { useEffect, useState } from "react";
-import { getSupabase } from "@/lib/supabase";
+// Layout for /admin routes. /admin/login is a public route and must NOT be
+// wrapped in AdminGuard, so this layout renders children directly. Protected
+// pages live in the (protected) route group, which has its own guarded layout.
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [email, setEmail] = useState("");
-
-  useEffect(() => {
-    const supabase = getSupabase();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user.email) {
-        setEmail(session.user.email);
-      }
-    });
-  }, []);
-
-  return (
-    <AdminGuard>
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <AdminHeader email={email} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {children}
-        </main>
-      </div>
-    </AdminGuard>
-  );
+  return <>{children}</>;
 }
