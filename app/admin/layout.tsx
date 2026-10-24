@@ -6,7 +6,7 @@
 import { AdminGuard } from "@/components/admin/AdminGuard";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { useEffect, useState } from "react";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 export default function AdminLayout({
   children,
@@ -16,7 +16,7 @@ export default function AdminLayout({
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user.email) {
         setEmail(session.user.email);

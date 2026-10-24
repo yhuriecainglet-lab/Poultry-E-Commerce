@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PublicLayout } from "@/components/PublicLayout";
 import { ProductCard } from "@/components/ProductCard";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 import { BUSINESS } from "@/lib/config";
 import { ProductGridSkeleton } from "@/components/LoadingSkeleton";
@@ -21,7 +21,7 @@ export default function HomePage() {
 
   useEffect(() => {
     let mounted = true;
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
 
     async function load() {
       try {

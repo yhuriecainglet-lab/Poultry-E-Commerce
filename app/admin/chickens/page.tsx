@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 import { AdminChickensTable } from "@/components/admin/AdminChickensTable";
 
@@ -15,7 +15,7 @@ export default function AdminChickensPage() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     supabase
       .from("chickens")
       .select("*, category:categories(*)")

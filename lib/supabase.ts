@@ -1,18 +1,23 @@
 // lib/supabase.ts
-// Browser-side Supabase client created inside a function so it is safe
-// to import in client components on both Vercel and GitHub Pages.
+// Single shared Supabase browser client (singleton). Safe for static export.
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-export function createBrowserSupabaseClient() {
+let instance: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (instance) return instance;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Missing Supabase environment variables. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
-    );
+  if (!supabaseUrl) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable.");
+  }
+  if (!supabaseAnonKey) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable.");
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey);
+  instance = createClient(supabaseUrl, supabaseAnonKey);
+  return instance;
 }

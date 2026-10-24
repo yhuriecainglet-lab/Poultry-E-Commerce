@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Category } from "@/lib/types";
 
 export default function CategoriesPage() {
@@ -15,12 +15,12 @@ export default function CategoriesPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     supabase.from("categories").select("*").order("sort_order", { ascending: true }).then(({ data }) => setCategories(data ?? []));
   }, []);
 
   async function handleCreate(formData: FormData) {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     const name = formData.get("name") as string;
     const slug = formData.get("slug") as string;
     const minAge = Number(formData.get("min_age_months"));
@@ -39,7 +39,7 @@ export default function CategoriesPage() {
   }
 
   async function handleUpdate(id: string, formData: FormData) {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     const name = formData.get("name") as string;
     const slug = formData.get("slug") as string;
     const minAge = Number(formData.get("min_age_months"));
@@ -61,7 +61,7 @@ export default function CategoriesPage() {
 
   async function handleDelete(id: string) {
     if (!window.confirm("Delete this category?")) return;
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     const { error: err } = await supabase.from("categories").delete().eq("id", id);
     if (err) { setError("Delete failed — category may still have chickens."); return; }
     setCategories((prev) => prev.filter((c) => c.id !== id));

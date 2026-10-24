@@ -11,7 +11,7 @@ import { ProductGallery } from "@/components/ProductGallery";
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
 import { InquiryButton } from "@/components/InquiryButton";
 import { ProductCard } from "@/components/ProductCard";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 import { formatPrice } from "@/lib/helpers";
 import { ProductDetailSkeleton } from "@/components/LoadingSkeleton";
@@ -31,7 +31,7 @@ function ChickenDetailContent() {
       return;
     }
     let mounted = true;
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
 
     async function load() {
       try {

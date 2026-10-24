@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -13,19 +13,24 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     let mounted = true;
 
     async function check() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), 5000)
+          ),
+        ]);
         if (!mounted) return;
-        if (!session) {
+        if (!result || !result.data?.session) {
           router.replace("/admin/login");
           return;
         }
         const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-        if (adminEmail && session.user.email !== adminEmail) {
+        if (adminEmail && result.data.session.user.email !== adminEmail) {
           await supabase.auth.signOut();
           router.replace("/admin/login");
           return;

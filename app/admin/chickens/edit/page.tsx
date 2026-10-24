@@ -6,7 +6,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 
 const SEXES = ["Male", "Female", "Unsexed"] as const;
@@ -22,7 +22,7 @@ function EditContent() {
 
   useEffect(() => {
     if (!id) return;
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     supabase.from("chickens").select("*").eq("id", id).single().then(({ data }) => {
       if (data) setChicken(data as Chicken);
     });
@@ -39,7 +39,7 @@ function EditContent() {
     setError("");
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
 
     const fields = {
       name: formData.get("name") as string,

@@ -7,7 +7,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { PublicLayout } from "@/components/PublicLayout";
 import { SearchAndFilter } from "@/components/SearchAndFilter";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 import { ProductGridSkeleton } from "@/components/LoadingSkeleton";
 
@@ -19,7 +19,7 @@ function ShopContent() {
 
   useEffect(() => {
     let mounted = true;
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
 
     async function load() {
       try {

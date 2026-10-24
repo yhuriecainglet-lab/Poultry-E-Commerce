@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Chicken } from "@/lib/types";
 import { formatPrice } from "@/lib/helpers";
 import { getAvailability } from "@/lib/types";
@@ -15,7 +15,7 @@ export default function AdminOverviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     supabase
       .from("chickens")
       .select("*, category:categories(*)")

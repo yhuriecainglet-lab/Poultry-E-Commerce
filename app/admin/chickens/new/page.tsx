@@ -6,7 +6,7 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Category } from "@/lib/types";
 
 const SEXES = ["Male", "Female", "Unsexed"] as const;
@@ -18,7 +18,7 @@ export default function NewChickenPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     supabase.from("categories").select("*").order("sort_order", { ascending: true }).then(({ data }) => setCategories(data ?? []));
   }, []);
 
@@ -28,7 +28,7 @@ export default function NewChickenPage() {
     setError("");
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
 
     const fields = {
       name: formData.get("name") as string,

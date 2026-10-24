@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Chicken, Category } from "@/lib/types";
 import { formatPrice } from "@/lib/helpers";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Toast } from "./Toast";
 
 interface Props {
@@ -25,7 +25,7 @@ export function AdminChickensTable({ chickens: initialChickens, categories: init
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     supabase.from("chickens").select("*, category:categories(*)").order("created_at", { ascending: false }).then(({ data }) => {
       if (data) setChickens(data as Chicken[]);
     });
@@ -46,7 +46,7 @@ export function AdminChickensTable({ chickens: initialChickens, categories: init
   function dismiss() { setTimeout(() => setToast(null), 4000); }
 
   async function toggle(id: string, field: "is_published" | "is_featured", value: boolean) {
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     try {
       await supabase.from("chickens").update({ [field]: value }).eq("id", id);
       setChickens((prev) =>
@@ -60,7 +60,7 @@ export function AdminChickensTable({ chickens: initialChickens, categories: init
 
   async function handleDelete(id: string) {
     if (!window.confirm("Delete this chicken?")) return;
-    const supabase = createBrowserSupabaseClient();
+    const supabase = getSupabase();
     try {
       await supabase.from("chickens").delete().eq("id", id);
       setChickens((prev) => prev.filter((c) => c.id !== id));
