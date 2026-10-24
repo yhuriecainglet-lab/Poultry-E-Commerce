@@ -73,7 +73,7 @@ npm run lint     # run ESLint
 - `/admin` — dashboard overview with stock stats
 - `/admin/chickens` — chicken list with search, category filter, publish/featured toggles, delete
 - `/admin/chickens/new` — add chicken with image upload
-- `/admin/chickens/[id]/edit` — edit chicken, add/replace images
+- `/admin/chickens/edit?id=` — edit chicken, add/replace images
 - `/admin/categories` — manage age categories
 
 Route protection: `/admin` layout requires a Supabase session; optionally restrict to `ADMIN_EMAIL`.

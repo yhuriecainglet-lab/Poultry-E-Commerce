@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
+import { Toast } from "@/components/admin/Toast";
 
 const SEXES = ["Male", "Female", "Unsexed"] as const;
 
@@ -19,17 +20,46 @@ function EditContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setNotFound(true);
+      return;
+    }
+    let mounted = true;
     const supabase = getSupabase();
-    supabase.from("chickens").select("*").eq("id", id).single().then(({ data }) => {
-      if (data) setChicken(data as Chicken);
+    supabase.from("chickens").select("*").eq("id", id).single().then(({ data, error: err }) => {
+      if (!mounted) return;
+      if (err || !data) {
+        setNotFound(true);
+        return;
+      }
+      setChicken(data as Chicken);
     });
     supabase.from("categories").select("*").order("sort_order", { ascending: true }).then(({ data }) => {
-      if (data) setCategories(data as Category[]);
+      if (mounted) setCategories(data as Category[]);
     });
+    return () => {
+      mounted = false;
+    };
   }, [id]);
+
+  if (notFound) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+        <h1 className="text-2xl font-bold text-charcoal">Chicken Not Found</h1>
+        <p className="text-muted mt-4">The chicken you're looking for doesn't exist.</p>
+        <Link
+          href="/admin/chickens"
+          className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-colors mt-6"
+        >
+          Back to chickens
+        </Link>
+      </div>
+    );
+  }
 
   if (!chicken) return <div className="text-muted">Loading...</div>;
 
@@ -83,7 +113,8 @@ function EditContent() {
 
     await supabase.from("chickens").update({ image_urls: [...keepUrls, ...newUrls] }).eq("id", chicken!.id);
 
-    router.push("/admin/chickens");
+    router.replace("/admin/chickens");
+    setToast({ message: "Chicken saved successfully", type: "success" });
   }
 
   return (
@@ -92,6 +123,7 @@ function EditContent() {
         <h1 className="text-2xl font-bold text-charcoal">Edit Chicken</h1>
         <Link href="/admin/chickens" className="text-sm text-primary hover:underline">← Back to list</Link>
       </div>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {error && <div className="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm">{error}</div>}
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-border shadow-sm p-6 space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -122,7 +122,7 @@ export default function AdminOverviewPage() {
                   </p>
                 </div>
                 <Link
-                  href={`/admin/chickens/${c.id}/edit`}
+                  href={`/admin/chickens/edit?id=${c.id}`}
                   className="text-sm text-primary hover:underline ml-2"
                 >
                   Edit
