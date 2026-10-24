@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 
 interface Props {
   email: string;
@@ -18,9 +18,9 @@ export function AdminHeader({ email }: Props) {
 
   async function handleLogout() {
     setLoading(true);
+    const supabase = createBrowserSupabaseClient();
     await supabase.auth.signOut();
     router.push("/admin/login");
-    router.refresh();
   }
 
   return (

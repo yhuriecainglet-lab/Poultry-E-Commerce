@@ -12,7 +12,13 @@ Next.js App Router + TypeScript + Tailwind CSS + Supabase poultry (chicken) e-co
 
 Out of scope: cart, payments, checkout, customer accounts.
 
-## Getting started
+## Admin security note
+
+Admin security depends on Supabase Row Level Security (RLS) policies. The public
+anon key is exposed to the browser by design. Public read access is limited to
+published rows only; writes (insert/update/delete) require an authenticated
+session. Ensure your RLS policies are configured correctly in Supabase before
+deploying.
 
 ### 1. Install dependencies
 

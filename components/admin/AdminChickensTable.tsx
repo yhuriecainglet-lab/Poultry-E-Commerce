@@ -3,12 +3,12 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Chicken, Category } from "@/lib/types";
 import { formatPrice } from "@/lib/helpers";
-import { deleteChicken, toggleChickenField } from "@/lib/actions/chickens";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 import { Toast } from "./Toast";
 
 interface Props {
@@ -16,11 +16,23 @@ interface Props {
   categories: Category[];
 }
 
-export function AdminChickensTable({ chickens, categories }: Props) {
+export function AdminChickensTable({ chickens: initialChickens, categories: initialCats }: Props) {
   const router = useRouter();
+  const [chickens, setChickens] = useState(initialChickens);
+  const [categories, setCategories] = useState(initialCats);
   const [query, setQuery] = useState("");
   const [catSlug, setCatSlug] = useState("all");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    supabase.from("chickens").select("*, category:categories(*)").order("created_at", { ascending: false }).then(({ data }) => {
+      if (data) setChickens(data as Chicken[]);
+    });
+    supabase.from("categories").select("*").order("sort_order", { ascending: true }).then(({ data }) => {
+      if (data) setCategories(data as Category[]);
+    });
+  }, []);
 
   const catNames = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c.name])), [categories]);
 
@@ -34,9 +46,12 @@ export function AdminChickensTable({ chickens, categories }: Props) {
   function dismiss() { setTimeout(() => setToast(null), 4000); }
 
   async function toggle(id: string, field: "is_published" | "is_featured", value: boolean) {
+    const supabase = createBrowserSupabaseClient();
     try {
-      await toggleChickenField(id, field, value);
-      router.refresh();
+      await supabase.from("chickens").update({ [field]: value }).eq("id", id);
+      setChickens((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
+      );
     } catch {
       setToast({ message: "Update failed", type: "error" });
       dismiss();
@@ -45,9 +60,10 @@ export function AdminChickensTable({ chickens, categories }: Props) {
 
   async function handleDelete(id: string) {
     if (!window.confirm("Delete this chicken?")) return;
+    const supabase = createBrowserSupabaseClient();
     try {
-      await deleteChicken(id);
-      router.refresh();
+      await supabase.from("chickens").delete().eq("id", id);
+      setChickens((prev) => prev.filter((c) => c.id !== id));
       setToast({ message: "Deleted", type: "success" });
     } catch {
       setToast({ message: "Delete failed", type: "error" });
@@ -100,6 +116,7 @@ export function AdminChickensTable({ chickens, categories }: Props) {
               <tr key={c.id} className="bg-white hover:bg-gray-50">
                 <td className="p-3">
                   {c.image_urls?.[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.image_urls[0]} alt="" className="w-12 h-12 rounded object-cover" />
                   ) : (
                     <span className="flex w-12 h-12 items-center justify-center rounded bg-gray-200">🐔</span>
@@ -122,7 +139,7 @@ export function AdminChickensTable({ chickens, categories }: Props) {
                   </button>
                 </td>
                 <td className="p-3 text-right space-y-1">
-                  <Link href={`/admin/chickens/${c.id}/edit`} className="text-xs text-primary hover:underline">Edit</Link>
+                  <Link href={`/admin/chickens/edit?id=${c.id}`} className="text-xs text-primary hover:underline">Edit</Link>
                   <button onClick={() => handleDelete(c.id)} className="text-xs text-danger hover:underline">Delete</button>
                 </td>
               </tr>

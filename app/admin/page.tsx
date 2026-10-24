@@ -1,39 +1,38 @@
 // app/admin/page.tsx
 // Overview: totals, counts, and the 5 most recently added chickens.
 
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Metadata } from "next";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 import { Chicken } from "@/lib/types";
 import { formatPrice } from "@/lib/helpers";
 import { getAvailability } from "@/lib/types";
 
-export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Admin dashboard overview.",
-};
+export default function AdminOverviewPage() {
+  const [chickens, setChickens] = useState<Chicken[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function AdminOverviewPage() {
-  const [{ data: chickens }, { data: recent }] = await Promise.all([
-    supabaseServer
-      .from("chickens")
-      .select("*, category:categories(*)")
-      .order("created_at", { ascending: false }),
-    supabaseServer
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    supabase
       .from("chickens")
       .select("*, category:categories(*)")
       .order("created_at", { ascending: false })
-      .limit(5),
-  ]);
+      .then(({ data }) => {
+        setChickens((data ?? []) as Chicken[]);
+        setLoading(false);
+      });
+  }, []);
 
-  const all = (chickens ?? []) as Chicken[];
-  const recentChickens = (recent ?? []) as Chicken[];
-
+  const all = chickens;
   const total = all.length;
   const inStock = all.filter((c) => c.stock_quantity > 5).length;
   const lowStock = all.filter((c) => c.stock_quantity >= 1 && c.stock_quantity <= 5).length;
   const soldOut = all.filter((c) => c.stock_quantity === 0).length;
   const unpublished = all.filter((c) => !c.is_published).length;
+  const recentChickens = all.slice(0, 5);
 
   const stats = [
     { label: "Total Chickens", value: total, accent: "text-charcoal" },
@@ -42,6 +41,10 @@ export default async function AdminOverviewPage() {
     { label: "Sold Out", value: soldOut, accent: "text-gray-500" },
     { label: "Unpublished", value: unpublished, accent: "text-muted" },
   ];
+
+  if (loading) {
+    return <div className="text-muted">Loading...</div>;
+  }
 
   return (
     <div>
@@ -55,7 +58,6 @@ export default async function AdminOverviewPage() {
         </Link>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {stats.map((s) => (
           <div
@@ -68,7 +70,6 @@ export default async function AdminOverviewPage() {
         ))}
       </div>
 
-      {/* Recent chickens */}
       <div className="bg-white rounded-xl border border-border shadow-sm">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-semibold text-charcoal">Recently Added</h2>

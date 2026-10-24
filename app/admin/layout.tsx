@@ -1,36 +1,37 @@
 // app/admin/layout.tsx
-// Protects all /admin routes (except login) by checking the Supabase session.
-// If ADMIN_EMAIL is set, only that email may access the dashboard.
-// Unauthenticated users are redirected to /admin/login.
+// Layout for /admin routes. Protected by AdminGuard (client-side).
 
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+"use client";
+
+import { AdminGuard } from "@/components/admin/AdminGuard";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { useEffect, useState } from "react";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 
-export const dynamic = "force-dynamic";
-
-export default async function AdminLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
+  const [email, setEmail] = useState("");
 
-  // If an admin email is configured, enforce it (only for already-signed-in users).
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail && session && session.user.email !== adminEmail) {
-    await supabaseServer.auth.signOut();
-    redirect("/admin/login");
-  }
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user.email) {
+        setEmail(session.user.email);
+      }
+    });
+  }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <AdminHeader email={(session?.user.email) ?? ""} />
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-        {children}
-      </main>
-    </div>
+    <AdminGuard>
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <AdminHeader email={email} />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {children}
+        </main>
+      </div>
+    </AdminGuard>
   );
 }

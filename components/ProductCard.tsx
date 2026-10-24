@@ -3,6 +3,8 @@
 // Displays: main image, name, age, price, availability badge, and a View Details link.
 // If no image exists, a placeholder is shown.
 
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Chicken } from "@/lib/types";
@@ -70,7 +72,7 @@ export function ProductCard({ chicken }: Props) {
             {formatPrice(chicken.price)}
           </span>
           <Link
-            href={`/chickens/${chicken.id}`}
+            href={`/chickens/detail?id=${chicken.id}`}
             className={`text-sm font-medium transition-colors ${
               isSoldOut
                 ? "text-muted cursor-not-allowed pointer-events-none"

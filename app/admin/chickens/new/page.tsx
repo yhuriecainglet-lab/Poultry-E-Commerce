@@ -3,24 +3,22 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
-import { createChicken } from "@/lib/actions/chickens";
+import { useRouter } from "next/navigation";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 import { Category } from "@/lib/types";
 
-const SEXES: { label: string; value: "Male" | "Female" | "Unsexed" }[] = [
-  { label: "Male", value: "Male" },
-  { label: "Female", value: "Female" },
-  { label: "Unsexed", value: "Unsexed" },
-];
+const SEXES = ["Male", "Female", "Unsexed"] as const;
 
 export default function NewChickenPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
     supabase.from("categories").select("*").order("sort_order", { ascending: true }).then(({ data }) => setCategories(data ?? []));
   }, []);
 
@@ -28,13 +26,55 @@ export default function NewChickenPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    try {
-      await createChicken(formData);
-    } catch (err) {
-      setError((err instanceof Error ? err.message : String(err)) || "Failed to add chicken");
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const supabase = createBrowserSupabaseClient();
+
+    const fields = {
+      name: formData.get("name") as string,
+      breed: formData.get("breed") as string,
+      age_months: Number(formData.get("age_months")),
+      sex: formData.get("sex") as "Male" | "Female" | "Unsexed",
+      weight_kg: formData.get("weight_kg") ? Number(formData.get("weight_kg")) : null,
+      color: (formData.get("color") as string) || null,
+      price: Number(formData.get("price")),
+      stock_quantity: Number(formData.get("stock_quantity")),
+      description: formData.get("description") as string,
+      health_notes: (formData.get("health_notes") as string) || null,
+      category_id: formData.get("category_id") as string,
+      is_featured: formData.get("is_featured") === "on",
+      is_published: formData.get("is_published") === "on",
+    };
+
+    const { data: chicken, error: insertError } = await supabase
+      .from("chickens")
+      .insert({ ...fields, image_urls: [] })
+      .select()
+      .single();
+
+    if (insertError || !chicken) {
+      setError(insertError?.message || "Failed to create chicken");
       setLoading(false);
+      return;
     }
+
+    const files = formData.getAll("images") as File[];
+    const urls: string[] = [];
+    for (const file of files) {
+      if (!file || file.size === 0) continue;
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `chicken-images/${chicken.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("chicken-images").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (uploadError) continue;
+      const { data: urlData } = supabase.storage.from("chicken-images").getPublicUrl(path);
+      urls.push(urlData.publicUrl);
+    }
+
+    if (urls.length) {
+      await supabase.from("chickens").update({ image_urls: urls }).eq("id", chicken.id);
+    }
+
+    router.push("/admin/chickens");
   }
 
   return (
@@ -58,7 +98,9 @@ export default function NewChickenPage() {
             <label className="block text-sm font-medium mb-1 text-charcoal">Category</label>
             <select name="category_id" required className="w-full px-3 py-2 rounded-lg border border-border bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/40">
               <option value="">Select category</option>
-              {categories.map((c) => (c.min_age_months === null ? <option key={c.id} value={c.id}>{c.name} ({c.min_age_months}+ months)</option> : <option key={c.id} value={c.id}>{c.name} ({c.min_age_months} months)</option>))}
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -68,7 +110,7 @@ export default function NewChickenPage() {
           <div>
             <label className="block text-sm font-medium mb-1 text-charcoal">Sex</label>
             <select name="sex" className="w-full px-3 py-2 rounded-lg border border-border bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/40">
-              {SEXES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {SEXES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>

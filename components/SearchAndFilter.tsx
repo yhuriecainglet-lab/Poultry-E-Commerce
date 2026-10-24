@@ -1,40 +1,36 @@
 // components/SearchAndFilter.tsx
-// Client-side search, category filter tabs, and sort dropdown.
-// Filtering happens in the browser for instant feedback.
+// Client-side search, category filter tabs, sort dropdown, and product grid.
+// All filtering, searching, and sorting happen in the browser.
 
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Chicken, Category } from "@/lib/types";
+import { ProductCard } from "@/components/ProductCard";
 
 interface Props {
   chickens: Chicken[];
   categories: Category[];
-  activeCategorySlug?: string;
-  children: (filtered: Chicken[]) => React.ReactNode;
 }
 
 type SortKey = "newest" | "price-asc" | "price-desc";
 
-export function SearchAndFilter({
-  chickens,
-  categories,
-  activeCategorySlug,
-  children,
-}: Props) {
+export function SearchAndFilter({ chickens, categories }: Props) {
+  const searchParams = useSearchParams();
+  const initialSlug = searchParams.get("category") ?? "all";
+
   const [query, setQuery] = useState("");
-  const [categorySlug, setCategorySlug] = useState(activeCategorySlug ?? "all");
+  const [categorySlug, setCategorySlug] = useState(initialSlug);
   const [sort, setSort] = useState<SortKey>("newest");
 
   const filtered = useMemo(() => {
     let list = [...chickens];
 
-    // Category filter
     if (categorySlug !== "all") {
       list = list.filter((c) => c.category?.slug === categorySlug);
     }
 
-    // Search by name or breed
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -44,11 +40,9 @@ export function SearchAndFilter({
       );
     }
 
-    // Sort
     list.sort((a, b) => {
       if (sort === "price-asc") return a.price - b.price;
       if (sort === "price-desc") return b.price - a.price;
-      // newest: created_at descending
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
@@ -57,7 +51,6 @@ export function SearchAndFilter({
 
   return (
     <div className="space-y-4">
-      {/* Search + Sort row */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <input
@@ -96,7 +89,6 @@ export function SearchAndFilter({
         </select>
       </div>
 
-      {/* Category filter tabs */}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setCategorySlug("all")}
@@ -127,7 +119,23 @@ export function SearchAndFilter({
         ))}
       </div>
 
-      {children(filtered)}
+      {filtered.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="text-5xl mb-3" aria-hidden="true">🐔</div>
+          <h2 className="text-lg font-semibold text-charcoal">
+            No chickens match your filters
+          </h2>
+          <p className="text-muted mt-1">
+            Try a different search term or category.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filtered.map((chicken) => (
+            <ProductCard key={chicken.id} chicken={chicken} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

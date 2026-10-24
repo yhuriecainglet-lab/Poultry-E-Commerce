@@ -1,57 +1,89 @@
-// app/admin/chickens/[id]/edit/page.tsx
-// Edit an existing chicken. Supports adding new images and keeping existing ones.
+// app/admin/chickens/edit/page.tsx
+// Edit an existing chicken. Reads ?id= from query string.
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
-import { updateChicken } from "@/lib/actions/chickens";
+import { useSearchParams, useRouter } from "next/navigation";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 
-interface Props {
-  params: Promise<{ id: string }>;
-}
+const SEXES = ["Male", "Female", "Unsexed"] as const;
 
-const SEXES: { label: string; value: "Male" | "Female" | "Unsexed" }[] = [
-  { label: "Male", value: "Male" },
-  { label: "Female", value: "Female" },
-  { label: "Unsexed", value: "Unsexed" },
-];
-
-export default function EditChickenPage({ params }: Props) {
+function EditContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+  const router = useRouter();
   const [chicken, setChicken] = useState<Chicken | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const idPromise = params.then((p) => p.id);
-    Promise.all([
-      idPromise.then((id) => supabase.from("chickens").select("*").eq("id", id).single()),
-      supabase.from("categories").select("*").order("sort_order", { ascending: true }),
-    ]).then(([{ data: c }, { data: cats }]) => {
-      setChicken(c as Chicken);
-      setCategories(cats ?? []);
+    if (!id) return;
+    const supabase = createBrowserSupabaseClient();
+    supabase.from("chickens").select("*").eq("id", id).single().then(({ data }) => {
+      if (data) setChicken(data as Chicken);
     });
-  }, [params]);
+    supabase.from("categories").select("*").order("sort_order", { ascending: true }).then(({ data }) => {
+      if (data) setCategories(data as Category[]);
+    });
+  }, [id]);
 
-  if (!chicken) return null;
-
-  const c = chicken;
+  if (!chicken) return <div className="text-muted">Loading...</div>;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    formData.append("keep_urls", (c.image_urls ?? []).join(","));
-    try {
-      await updateChicken(c.id, formData);
-    } catch (err) {
-      setError((err instanceof Error ? err.message : String(err)) || "Failed to update chicken");
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const supabase = createBrowserSupabaseClient();
+
+    const fields = {
+      name: formData.get("name") as string,
+      breed: formData.get("breed") as string,
+      age_months: Number(formData.get("age_months")),
+      sex: formData.get("sex") as "Male" | "Female" | "Unsexed",
+      weight_kg: formData.get("weight_kg") ? Number(formData.get("weight_kg")) : null,
+      color: (formData.get("color") as string) || null,
+      price: Number(formData.get("price")),
+      stock_quantity: Number(formData.get("stock_quantity")),
+      description: formData.get("description") as string,
+      health_notes: (formData.get("health_notes") as string) || null,
+      category_id: formData.get("category_id") as string,
+      is_featured: formData.get("is_featured") === "on",
+      is_published: formData.get("is_published") === "on",
+    };
+
+    const { error: updateError } = await supabase
+      .from("chickens")
+      .update(fields)
+      .eq("id", chicken!.id);
+
+    if (updateError) {
+      setError(updateError.message);
       setLoading(false);
+      return;
     }
+
+    const files = formData.getAll("images") as File[];
+    const keepUrls = chicken!.image_urls ?? [];
+    const newUrls: string[] = [];
+    for (const file of files) {
+      if (!file || file.size === 0) continue;
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `chicken-images/${chicken!.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("chicken-images").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (uploadError) continue;
+      const { data: urlData } = supabase.storage.from("chicken-images").getPublicUrl(path);
+      newUrls.push(urlData.publicUrl);
+    }
+
+    await supabase.from("chickens").update({ image_urls: [...keepUrls, ...newUrls] }).eq("id", chicken!.id);
+
+    router.push("/admin/chickens");
   }
 
   return (
@@ -73,9 +105,11 @@ export default function EditChickenPage({ params }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1 text-charcoal">Category</label>
-            <select name="category_id" required className="w-full px-3 py-2 rounded-lg border border-border bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/40">
+            <select name="category_id" required defaultValue={chicken.category_id} className="w-full px-3 py-2 rounded-lg border border-border bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/40">
               <option value="">Select category</option>
-              {categories.map((c) => (c.min_age_months === null ? <option key={c.id} value={c.id} selected={c.id === chicken.category_id}>{c.name} ({c.min_age_months}+ months)</option> : <option key={c.id} value={c.id} selected={c.id === chicken.category_id}>{c.name} ({c.min_age_months} months)</option>))}
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -84,8 +118,8 @@ export default function EditChickenPage({ params }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1 text-charcoal">Sex</label>
-            <select name="sex" className="w-full px-3 py-2 rounded-lg border border-border bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/40">
-              {SEXES.map((s) => <option key={s.value} value={s.value} selected={chicken.sex === s.value}>{s.label}</option>)}
+            <select name="sex" defaultValue={chicken.sex} className="w-full px-3 py-2 rounded-lg border border-border bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/40">
+              {SEXES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
@@ -123,6 +157,7 @@ export default function EditChickenPage({ params }: Props) {
             <div className="flex gap-2 mb-3">
               {(chicken.image_urls ?? []).map((url, i) => (
                 <div key={i} className="relative w-20 h-20 rounded overflow-hidden border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" className="w-full h-full object-cover" />
                   <span className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1 rounded">Keep</span>
                 </div>
@@ -147,5 +182,13 @@ export default function EditChickenPage({ params }: Props) {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function EditChickenPage() {
+  return (
+    <Suspense fallback={<div className="text-muted">Loading...</div>}>
+      <EditContent />
+    </Suspense>
   );
 }

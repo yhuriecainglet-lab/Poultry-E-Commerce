@@ -2,31 +2,31 @@
 // Table of all chickens (published and unpublished) with search,
 // category filter, and quick actions (stock update, publish/featured toggle, delete).
 
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Metadata } from "next";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 import { AdminChickensTable } from "@/components/admin/AdminChickensTable";
 
-export const metadata: Metadata = {
-  title: "Chickens",
-  description: "Manage your chicken inventory.",
-};
+export default function AdminChickensPage() {
+  const [chickens, setChickens] = useState<Chicken[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-export default async function AdminChickensPage() {
-  const [{ data: chickens }, { data: categories }] = await Promise.all([
-    supabaseServer
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    supabase
       .from("chickens")
       .select("*, category:categories(*)")
-      .order("created_at", { ascending: false }),
-    supabaseServer
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setChickens((data ?? []) as Chicken[]));
+    supabase
       .from("categories")
       .select("*")
-      .order("sort_order", { ascending: true }),
-  ]);
-
-  const allChickens = (chickens ?? []) as Chicken[];
-  const cats = (categories ?? []) as Category[];
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => setCategories((data ?? []) as Category[]));
+  }, []);
 
   return (
     <div>
@@ -40,7 +40,7 @@ export default async function AdminChickensPage() {
         </Link>
       </div>
 
-      <AdminChickensTable chickens={allChickens} categories={cats} />
+      <AdminChickensTable chickens={chickens} categories={categories} />
     </div>
   );
 }

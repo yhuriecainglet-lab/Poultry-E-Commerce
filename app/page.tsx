@@ -1,36 +1,92 @@
 // app/page.tsx
 // Homepage: hero, category cards, featured chickens, "Why Choose Us", and footer.
+// Client-side data fetching for static export compatibility.
 
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Metadata } from "next";
 import { PublicLayout } from "@/components/PublicLayout";
 import { ProductCard } from "@/components/ProductCard";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 import { Chicken, Category } from "@/lib/types";
 import { BUSINESS } from "@/lib/config";
+import { ProductGridSkeleton } from "@/components/LoadingSkeleton";
 
-export const dynamic = "force-dynamic";
+export default function HomePage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [featuredChickens, setFeaturedChickens] = useState<Chicken[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export const metadata: Metadata = {
-  title: "Home",
-  description: BUSINESS.tagline,
-};
+  useEffect(() => {
+    let mounted = true;
+    const supabase = createBrowserSupabaseClient();
 
-export default async function HomePage() {
-  // Fetch categories and featured chickens in parallel.
-  const [{ data: categories }, { data: featured }] = await Promise.all([
-    supabaseServer.from("categories").select("*").order("sort_order", { ascending: true }),
-    supabaseServer
-      .from("chickens")
-      .select("*, category:categories(*)")
-      .eq("is_featured", true)
-      .eq("is_published", true)
-      .order("created_at", { ascending: false })
-      .limit(8),
-  ]);
+    async function load() {
+      try {
+        const [{ data: cats }, { data: featured }] = await Promise.all([
+          supabase.from("categories").select("*").order("sort_order", { ascending: true }),
+          supabase
+            .from("chickens")
+            .select("*, category:categories(*)")
+            .eq("is_featured", true)
+            .eq("is_published", true)
+            .order("created_at", { ascending: false })
+            .limit(8),
+        ]);
+        if (mounted) {
+          setCategories(cats ?? []);
+          setFeaturedChickens(featured ?? []);
+          setError(null);
+        }
+      } catch (err) {
+        if (mounted) {
+          console.error("Failed to load homepage data:", err);
+          setError(err instanceof Error ? err.message : "Failed to load data");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
 
-  const cats = (categories ?? []) as Category[];
-  const featuredChickens = (featured ?? []) as Chicken[];
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <PublicLayout>
+        <section className="py-12 sm:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <ProductGridSkeleton count={8} />
+          </div>
+        </section>
+      </PublicLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PublicLayout>
+        <section className="py-16 sm:py-24">
+          <div className="max-w-2xl mx-auto px-4 text-center">
+            <div className="text-5xl mb-3" aria-hidden="true">🐔</div>
+            <h2 className="text-lg font-semibold text-charcoal">Unable to load</h2>
+            <p className="text-muted mt-1">{error}</p>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-colors mt-4"
+            >
+              Try Again
+            </Link>
+          </div>
+        </section>
+      </PublicLayout>
+    );
+  }
 
   return (
     <PublicLayout>
@@ -67,10 +123,10 @@ export default async function HomePage() {
             Shop by Age
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cats.map((cat) => (
+            {categories.map((cat) => (
               <Link
                 key={cat.id}
-                href={`/shop/${cat.slug}`}
+                href={`/shop?category=${cat.slug}`}
                 className="group bg-white rounded-xl border border-border shadow-sm p-6 hover:shadow-md hover:border-primary/40 transition-all"
               >
                 <div className="text-3xl mb-3" aria-hidden="true">
